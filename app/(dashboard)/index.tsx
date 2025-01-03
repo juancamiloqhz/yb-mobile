@@ -1,5 +1,6 @@
 import * as React from "react"
 import { View } from "react-native"
+import { Link } from "expo-router"
 import Animated, {
   FadeInUp,
   FadeOutDown,
@@ -108,6 +109,10 @@ export default function Screen() {
           >
             <Text>Update</Text>
           </Button>
+
+          <Link href="/movies">
+            <Text>Movies</Text>
+          </Link>
         </CardFooter>
       </Card>
     </View>

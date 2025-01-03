@@ -1,7 +1,7 @@
 import "@/global.css"
 
 import * as React from "react"
-import { Platform, View } from "react-native"
+import { AppStateStatus, Platform } from "react-native"
 import {
   DarkTheme,
   DefaultTheme,
@@ -9,18 +9,28 @@ import {
   ThemeProvider,
 } from "@react-navigation/native"
 import { PortalHost } from "@rn-primitives/portal"
+import {
+  focusManager,
+  QueryClient,
+  QueryClientProvider,
+} from "@tanstack/react-query"
 import { useFonts } from "expo-font"
 import { Stack } from "expo-router"
 import * as SplashScreen from "expo-splash-screen"
 import { StatusBar } from "expo-status-bar"
 
 import { setAndroidNavigationBar } from "@/lib/android-navigation-bar"
-import config from "@/lib/config"
 import { NAV_THEME } from "@/lib/constants"
-import { Bell } from "@/lib/icons/Bell"
-import { UserCircle } from "@/lib/icons/UserCircle"
+import { AuthProvider } from "@/lib/context/auth"
 import { useColorScheme } from "@/lib/useColorScheme"
-import { ThemeToggle } from "@/components/ThemeToggle"
+import { useAppState } from "@/hooks/use-app-state"
+import { useOnlineManager } from "@/hooks/use-online-manager"
+import { AuthGuard } from "@/components/guards/auth-guard"
+
+export {
+  // Catch any errors thrown by the Layout component.
+  ErrorBoundary,
+} from "expo-router"
 
 const LIGHT_THEME: Theme = {
   ...DefaultTheme,
@@ -31,10 +41,16 @@ const DARK_THEME: Theme = {
   colors: NAV_THEME.dark,
 }
 
-export {
-  // Catch any errors thrown by the Layout component.
-  ErrorBoundary,
-} from "expo-router"
+function onAppStateChange(status: AppStateStatus) {
+  // React Query already supports in web browser refetch on window focus by default
+  if (Platform.OS !== "web") {
+    focusManager.setFocused(status === "active")
+  }
+}
+
+const queryClient = new QueryClient({
+  defaultOptions: { queries: { retry: 2 } },
+})
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync()
@@ -46,6 +62,9 @@ export default function RootLayout() {
     SpaceMono: require("../assets/fonts/SpaceMono-Regular.ttf"),
   })
   const [isColorSchemeLoaded, setIsColorSchemeLoaded] = React.useState(false)
+
+  useOnlineManager()
+  useAppState(onAppStateChange)
 
   useIsomorphicLayoutEffect(() => {
     if (hasMounted.current || !loaded) {
@@ -62,44 +81,41 @@ export default function RootLayout() {
     SplashScreen.hideAsync()
   }, [loaded])
 
-  if (!isColorSchemeLoaded || !loaded) {
-    return null
-  }
-
+  // Always render the Stack component, even during loading
   return (
-    <ThemeProvider value={isDarkColorScheme ? DARK_THEME : LIGHT_THEME}>
-      <StatusBar style={isDarkColorScheme ? "light" : "dark"} />
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="+not-found" />
-        <Stack.Screen
-          name="index"
-          options={{
-            title: config.name,
-            headerLeft: () => (
-              <>
-                <UserCircle
-                  className="text-foreground"
-                  size={23}
-                  strokeWidth={1.25}
+    <AuthProvider>
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider value={isDarkColorScheme ? DARK_THEME : LIGHT_THEME}>
+          <StatusBar style={isDarkColorScheme ? "light" : "dark"} />
+          <Stack
+            screenOptions={{
+              headerShown: false,
+            }}
+          >
+            {!isColorSchemeLoaded || !loaded ? (
+              <Stack.Screen name="loading" options={{ headerShown: false }} />
+            ) : (
+              <AuthGuard>
+                <Stack.Screen
+                  name="sign-in"
+                  options={{
+                    title: "Sign In",
+                    headerShown: false,
+                  }}
                 />
-              </>
-            ),
-            headerRight: () => (
-              <View className="flex-row items-center gap-3">
-                <Bell
-                  className="text-foreground"
-                  size={23}
-                  strokeWidth={1.25}
+                <Stack.Screen
+                  name="(dashboard)"
+                  options={{
+                    headerShown: false,
+                  }}
                 />
-                <ThemeToggle />
-              </View>
-            ),
-          }}
-        />
-      </Stack>
-      <PortalHost />
-    </ThemeProvider>
+              </AuthGuard>
+            )}
+            <PortalHost />
+          </Stack>
+        </ThemeProvider>
+      </QueryClientProvider>
+    </AuthProvider>
   )
 }
 

@@ -16,3 +16,5 @@ export const NAV_THEME = {
     text: "hsl(0 0% 98%)", // foreground
   },
 }
+export const AUTH_TOKEN_KEY = "token"
+export const REFRESHED_TOKEN_HEADER = "x-refreshed-token"
