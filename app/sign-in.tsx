@@ -2,7 +2,6 @@ import React from "react"
 import { Alert, Text, View } from "react-native"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useMutation } from "@tanstack/react-query"
-import Constants from "expo-constants"
 import { router } from "expo-router"
 import { Controller, useForm } from "react-hook-form"
 import { z } from "zod"
@@ -22,15 +21,17 @@ const signInSchema = z.object({
 export type SignInSchema = z.infer<typeof signInSchema>
 
 export default function SignInScreen() {
-  const { login } = useAuth()
+  const [isLoading, setIsLoading] = React.useState(false)
+  const { signIn } = useAuth()
 
   const mutation = useMutation({
-    mutationFn: login,
+    mutationFn: signIn,
     onSuccess: () => {
-      router.navigate("/")
+      router.replace("/")
     },
     onError: error => {
       Alert.alert("Error", error.message || "Failed to sign in")
+      setIsLoading(false)
     },
   })
 
@@ -51,7 +52,8 @@ export default function SignInScreen() {
   })
 
   async function onSubmit(formData: SignInSchema) {
-    mutation.mutate(formData)
+    setIsLoading(true)
+    await mutation.mutateAsync(formData)
   }
 
   return (
@@ -101,29 +103,17 @@ export default function SignInScreen() {
           <Text className="text-destructive">{errors.password.message}</Text>
         )}
       </View>
-      <View className="mt-14 flex-col gap-8">
-        <View>
-          <Button
-            variant="outline"
-            onPress={() => {
-              reset({
-                email: "",
-                password: "",
-              })
-            }}
-          >
-            <Text>Reset</Text>
-          </Button>
-        </View>
-
-        <View>
-          <Button
-            onPress={handleSubmit(onSubmit)}
-            disabled={mutation.isPending}
-          >
-            <Text className="text-primary-foreground">Submit</Text>
-          </Button>
-        </View>
+      <View className="">
+        <Button
+          onPress={handleSubmit(onSubmit)}
+          disabled={isLoading}
+          size="lg"
+          className="w-full"
+        >
+          <Text className="text-lg font-semibold text-primary-foreground">
+            {isLoading ? "Signing In..." : "Sign In"}
+          </Text>
+        </Button>
       </View>
     </View>
   )

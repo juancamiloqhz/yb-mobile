@@ -1,10 +1,8 @@
 import axios from "axios"
 import * as SecureStore from "expo-secure-store"
 
-// import { signOutUser } from "@/slices/auth.slice"
 import { AUTH_TOKEN_KEY, REFRESHED_TOKEN_HEADER } from "@/lib/constants"
-
-// import { store } from "@/lib/redux/store"
+import { useUserStore } from "@/lib/store/user"
 
 const apiCamelback = axios.create({
   baseURL: "http://localhost:3000",
@@ -12,7 +10,6 @@ const apiCamelback = axios.create({
 
 apiCamelback.interceptors.request.use(
   async config => {
-    // const token = localStorage.getItem(AUTH_TOKEN_KEY)
     const token = await SecureStore.getItemAsync(AUTH_TOKEN_KEY)
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
@@ -34,9 +31,10 @@ apiCamelback.interceptors.response.use(
   },
   async error => {
     if (error.response?.status === 401) {
-      // Dispatch the sign out action which will clear the token and user state
-      // await store.dispatch(signOutUser())
+      // Clear the token
       await SecureStore.deleteItemAsync(AUTH_TOKEN_KEY)
+      // Reset the user state directly using the store
+      useUserStore.getState().setUser(null)
       return Promise.reject(new Error("Session expired. Please log in again."))
     }
     console.log("error apiCamelback", error)

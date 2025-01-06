@@ -8,6 +8,7 @@ import Animated, {
 } from "react-native-reanimated"
 
 import { Info } from "@/lib/icons/Info"
+import { useUserStore } from "@/lib/store/user"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import {
@@ -30,7 +31,7 @@ const GITHUB_AVATAR_URI = "https://avatars.githubusercontent.com/u/26069465?v=4"
 
 export default function Screen() {
   const [progress, setProgress] = React.useState(78)
-
+  const { user } = useUserStore()
   function updateProgressValue() {
     setProgress(Math.floor(Math.random() * 100))
   }
@@ -48,7 +49,7 @@ export default function Screen() {
           <CardTitle className="pb-2 text-center">Juan Camilo QHz</CardTitle>
           <View className="flex-row">
             <CardDescription className="text-base font-semibold">
-              Software Engineer
+              Software Engineer ({user?.role})
             </CardDescription>
             <Tooltip delayDuration={150}>
               <TooltipTrigger className="px-2 pb-0.5 active:opacity-50">

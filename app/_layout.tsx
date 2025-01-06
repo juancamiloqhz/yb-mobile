@@ -15,17 +15,18 @@ import {
   QueryClientProvider,
 } from "@tanstack/react-query"
 import { useFonts } from "expo-font"
-import { Stack } from "expo-router"
+import { Slot } from "expo-router"
 import * as SplashScreen from "expo-splash-screen"
 import { StatusBar } from "expo-status-bar"
 
 import { setAndroidNavigationBar } from "@/lib/android-navigation-bar"
 import { NAV_THEME } from "@/lib/constants"
 import { AuthProvider } from "@/lib/context/auth"
-import { useColorScheme } from "@/lib/useColorScheme"
 import { useAppState } from "@/hooks/use-app-state"
+import { useColorScheme } from "@/hooks/use-color-scheme"
 import { useOnlineManager } from "@/hooks/use-online-manager"
-import { AuthGuard } from "@/components/guards/auth-guard"
+
+// import { AuthGuard } from "@/components/guards/auth-guard"
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -58,7 +59,7 @@ SplashScreen.preventAutoHideAsync()
 export default function RootLayout() {
   const hasMounted = React.useRef(false)
   const { colorScheme, isDarkColorScheme } = useColorScheme()
-  const [loaded] = useFonts({
+  const [loaded, error] = useFonts({
     SpaceMono: require("../assets/fonts/SpaceMono-Regular.ttf"),
   })
   const [isColorSchemeLoaded, setIsColorSchemeLoaded] = React.useState(false)
@@ -67,9 +68,11 @@ export default function RootLayout() {
   useAppState(onAppStateChange)
 
   useIsomorphicLayoutEffect(() => {
-    if (hasMounted.current || !loaded) {
-      return
-    }
+    if (error) throw error
+  }, [error])
+
+  useIsomorphicLayoutEffect(() => {
+    if (hasMounted.current || !loaded) return
 
     if (Platform.OS === "web") {
       // Adds the background color to the html element to prevent white background on overscroll.
@@ -81,13 +84,21 @@ export default function RootLayout() {
     SplashScreen.hideAsync()
   }, [loaded])
 
-  // Always render the Stack component, even during loading
+  if (!isColorSchemeLoaded || !loaded) {
+    return null
+  }
+
+  return <RootLayoutNav isDarkColorScheme={isDarkColorScheme} />
+}
+
+function RootLayoutNav({ isDarkColorScheme }: { isDarkColorScheme: boolean }) {
   return (
     <AuthProvider>
       <QueryClientProvider client={queryClient}>
         <ThemeProvider value={isDarkColorScheme ? DARK_THEME : LIGHT_THEME}>
           <StatusBar style={isDarkColorScheme ? "light" : "dark"} />
-          <Stack
+          <Slot />
+          {/* <Stack
             screenOptions={{
               headerShown: false,
             }}
@@ -111,8 +122,8 @@ export default function RootLayout() {
                 />
               </AuthGuard>
             )}
-            <PortalHost />
-          </Stack>
+            </Stack> */}
+          <PortalHost />
         </ThemeProvider>
       </QueryClientProvider>
     </AuthProvider>

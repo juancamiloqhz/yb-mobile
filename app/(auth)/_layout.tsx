@@ -1,21 +1,42 @@
 import React from "react"
 import { View } from "react-native"
-import { Link, Stack } from "expo-router"
+import { Link, Redirect, Stack } from "expo-router"
 
 import config from "@/lib/config"
+import { useAuth } from "@/lib/context/auth"
 import { Bell } from "@/lib/icons/Bell"
+import { LogOut } from "@/lib/icons/LogOut"
 import { UserCircle } from "@/lib/icons/UserCircle"
 import { useUserStore } from "@/lib/store/user"
-import { useColorScheme } from "@/lib/useColorScheme"
-import { ThemeToggle } from "@/components/ThemeToggle"
+import { useColorScheme } from "@/hooks/use-color-scheme"
+import { Button } from "@/components/ui/button"
+import ThemeToggle from "@/components/theme-toggle"
 
-export default function DashboardLayoutRoute() {
+export default function AppLayout() {
   const { isDarkColorScheme } = useColorScheme()
-  const { fetchUser } = useUserStore()
+  const { isLoading, isAuthenticated, signOut } = useAuth()
+
+  const { fetchUser, user } = useUserStore()
 
   React.useEffect(() => {
-    fetchUser()
-  }, [])
+    if (isAuthenticated) {
+      fetchUser()
+    }
+  }, [isAuthenticated])
+
+  if (isLoading) return null
+
+  if (!isAuthenticated) {
+    return <Redirect href="/sign-in" />
+  }
+
+  if (!user) {
+    return (
+      <Stack>
+        <Stack.Screen name="loading" options={{ headerShown: false }} />
+      </Stack>
+    )
+  }
 
   return (
     <Stack
@@ -52,6 +73,14 @@ export default function DashboardLayoutRoute() {
                 />
               </Link>
               <ThemeToggle />
+              <Button
+                onPress={signOut}
+                variant="ghost"
+                size="icon"
+                className="m-0 w-auto p-0"
+              >
+                <LogOut size={23} strokeWidth={1.25} />
+              </Button>
             </View>
           ),
         }}

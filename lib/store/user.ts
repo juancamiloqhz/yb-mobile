@@ -1,7 +1,7 @@
 import { create } from "zustand"
 
 import { User } from "@/types/temp-types"
-import apiCamelback from "@/lib/api/apiCamelback"
+import apiCamelback from "@/lib/api/api-camelback"
 
 interface UserStore {
   user: User | null

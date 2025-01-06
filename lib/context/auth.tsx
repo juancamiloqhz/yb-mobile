@@ -1,18 +1,18 @@
 import React from "react"
-import { UserDto } from "@yellowbird-holdings/camelhumps-types"
+import { router } from "expo-router"
 
 import { User } from "@/types/temp-types"
-import apiCamelback from "@/lib/api/apiCamelback"
+import apiCamelback from "@/lib/api/api-camelback"
 import { AUTH_TOKEN_KEY } from "@/lib/constants"
 import { useUserStore } from "@/lib/store/user"
 import { setStorageItemAsync, useStorageState } from "@/hooks/use-storage-state"
 import { SignInSchema } from "@/app/sign-in"
 
 type AuthContextType = {
-  isAuthenticated: boolean
   isLoading: boolean
-  login: (credentials: SignInSchema) => Promise<void>
-  logout: () => Promise<void>
+  signIn: (credentials: SignInSchema) => Promise<void>
+  signOut: () => Promise<void>
+  isAuthenticated: boolean
 }
 
 interface LoginResponse {
@@ -23,70 +23,40 @@ interface LoginResponse {
 const AuthContext = React.createContext<AuthContextType | null>(null)
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [isAuthenticated, setIsAuthenticated] = React.useState(false)
-  const [isLoading, setIsLoading] = React.useState(true)
-  const [[loading, token]] = useStorageState(AUTH_TOKEN_KEY)
-  const { user, setUser } = useUserStore()
+  const [[isLoading, token]] = useStorageState(AUTH_TOKEN_KEY)
+  const { setUser } = useUserStore()
 
-  React.useEffect(() => {
-    // Check for existing token
-    checkAuthStatus()
-  }, [loading])
-
-  async function checkAuthStatus() {
+  const signIn = React.useCallback(async (credentials: SignInSchema) => {
     try {
-      if (!token || !user) {
-        setIsAuthenticated(false)
-        setIsLoading(false)
-        return
-      }
-
-      setIsAuthenticated(true)
-      setIsLoading(false)
-    } catch (error) {
-      console.error("Auth check failed:", error)
-      setIsAuthenticated(false)
-      setIsLoading(false)
-    }
-  }
-
-  async function login(credentials: SignInSchema) {
-    try {
-      setIsLoading(true)
       const response = await apiCamelback.post<LoginResponse>(
         "/api/v1/auth",
         credentials
       )
-      const { token, user } = response.data
+      const { token } = response.data
 
       await setStorageItemAsync(AUTH_TOKEN_KEY, token)
-      setUser(user)
-      setIsAuthenticated(true)
     } catch (error) {
       throw error
-    } finally {
-      setIsLoading(false)
     }
-  }
+  }, [])
 
-  async function logout() {
+  const signOut = React.useCallback(async () => {
     try {
-      setIsLoading(true)
       await setStorageItemAsync(AUTH_TOKEN_KEY, null)
+      router.navigate("/sign-in")
       setUser(null)
-      setIsAuthenticated(false)
-    } finally {
-      setIsLoading(false)
+    } catch (error) {
+      throw error
     }
-  }
+  }, [])
 
   return (
     <AuthContext.Provider
       value={{
-        isAuthenticated,
         isLoading,
-        login,
-        logout,
+        signIn,
+        signOut,
+        isAuthenticated: !!token,
       }}
     >
       {children}
